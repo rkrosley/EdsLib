@@ -37,7 +37,7 @@ project(EDSLIB C)
 # can set the same cache variables which will skip this search altogether.
 #
 function(find_edslib_dependency DEPNAME HEADER_FILE)
-
+  message("seeking edslib dependency " ${DEPNAME} " and " ${HEADER_FILE} " with " ${CMAKE_FIND_ROOT_PATH} ".")
   # If already found then nothing to do
   if(${DEPNAME}_FOUND)
     return()
@@ -85,11 +85,13 @@ function(find_edslib_dependency DEPNAME HEADER_FILE)
     # it is not anticipated that a cross-compile tree would have multiple
     # versions of the same header in its include paths.
     file(GLOB_RECURSE ${DEPNAME}_HEADER_PATH
-        RELATIVE "${CMAKE_FIND_ROOT_PATH}/usr/include"
+        RELATIVE "${CMAKE_FIND_ROOT_PATH}"
         FOLLOW_SYMLINKS
-        "${CMAKE_FIND_ROOT_PATH}/usr/include/*/${HEADER_FILE}")
+        "${CMAKE_FIND_ROOT_PATH}/*/${HEADER_FILE}")
+    message("found header path " ${${DEPNAME}_HEADER_PATH} ".")
 
     find_library(${DEPNAME}_LIBRARY_FILE NAMES ${BASENAMES})
+    message("found library path " ${${DEPNAME}_LIBRARY_FILE} ".")
     if (${DEPNAME}_HEADER_PATH AND ${DEPNAME}_LIBRARY_FILE)
 
       # Set the FOUND output to true
@@ -101,7 +103,7 @@ function(find_edslib_dependency DEPNAME HEADER_FILE)
 
       # If the file does not have any path markers then no need to add any paths
       if (HPATH MATCHES "[A-Za-z]+")
-        set(${DEPNAME}_INCLUDE_DIRS "${CMAKE_FIND_ROOT_PATH}/usr/include/${HPATH}"
+        set(${DEPNAME}_INCLUDE_DIRS "${CMAKE_FIND_ROOT_PATH}/${HPATH}"
             CACHE PATH "Include directories for ${DEPNAME}")
       endif()
 
