@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:seds="http://www.ccsds.org/schema/sois/seds"
+    xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://www.ccsds.org/schema/sois/seds"
+    elementFormDefault="qualified" attributeFormDefault="unqualified"
+    version="1.0">
+	<xs:simpleType name="ExtErrorControlType">
+		<xs:annotation>
+			<xs:documentation>Local types of error control algorithm</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="localErrorControl" />
+			<!-- At least one entry is defined here, because schema validation does not occur on some systems with an empty enumeration. -->
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="ExtEncodingRulesType">
+		<xs:annotation>
+			<xs:documentation>
+				Local types of encoding rules for composite data types
+			</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="localEncodingRules" />
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="ExtEncodingAndPrecisionType">
+		<xs:annotation>
+			<xs:documentation>Local types of encoding and precision for floating point numbers</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="localEncodingAndPrecision" />
+			<!-- At least one entry is defined here, because schema validation does not occur on some systems with an empty enumeration. -->
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="ExtIntegerEncodingType">
+		<xs:annotation>
+			<xs:documentation>Local types of encoding for integers</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="localIntegerEncoding" />
+			<!-- At least one entry is defined here, because schema validation does not occur on some systems with an empty enumeration. -->
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="ExtStringEncodingType">
+		<xs:annotation>
+			<xs:documentation>Local types of encoding for strings</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="localStringEncoding" />
+			<!-- At least one entry is defined here, because schema validation does not occur on some systems with an empty enumeration. -->
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="ExtMathOperatorsType">
+		<xs:annotation>
+			<xs:documentation>Local math operators</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="localMathOperator" />
+			<!-- At least one entry is defined here, because schema validation does not occur on some systems with an empty enumeration. -->
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="ExtQuantityKind">
+		<xs:annotation>
+			<xs:documentation>Local quantity kinds</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="localQK" />
+			<!-- At least one entry is defined here, because schema validation does not occur on some systems with an empty enumeration. -->
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="ExtUnit">
+		<xs:annotation>
+			<xs:documentation>Local units</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="second_65536">
+				<xs:annotation>
+					<xs:documentation>
+						This unit is 1/65536 second.
+						A binary fraction of 16 bits would produce this unit.
+						For example, a CCSDS unsegmented time code in seconds with two octets in the fraction would have this unit.
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="dataReferenceType">
+		<xs:annotation>
+			<xs:documentation>technique to refer to data</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="direct">
+				<xs:annotation>
+					<xs:documentation>
+						The value of data occupies an instance of a type.
+						When applied to an argument, this indicates that the argument is passed by value.
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="pointer">
+				<xs:annotation>
+					<xs:documentation>
+						A pointer to the value of data occupies an instance of a type.
+						When applied to an argument, this indicates that the argument is passed by reference.
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="pointerPointer">
+				<xs:annotation>
+					<xs:documentation>
+						A pointer to a pointer to the value of data occupies an instance of a type.
+						When applied to an argument, this indicates that the argument is passed by reference to a reference.
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:attributeGroup name="ExtensionSemanticsAttributeGroup">
+		<!-- Add attributes required by a project here.
+		SEDS that use these ad hoc attributes lack standard support for interoperability across agencies. -->
+		<xs:attribute name="apid" type="xs:string"/>
+		<xs:attribute name="commandCode" type="xs:string"/>
+		<xs:attribute name="cui" type="xs:string"/>
+		<xs:attribute name="msgid" type="xs:string"/>
+		<xs:attribute name="dataRef" type="seds:dataReferenceType"/>
+	</xs:attributeGroup>
+</xs:schema>

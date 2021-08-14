@@ -46,6 +46,7 @@
 #include <stdint.h>
 
 #include "ccsds_spacepacket_eds_typedefs.h"
+#include "cfe_mission_eds_designparameters.h"
 #include "cfe_sb_eds_typedefs.h"
 #include "cfe_mission_eds_parameters.h"
 #include "cfe_missionlib_runtime.h"
