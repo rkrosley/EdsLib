@@ -60,32 +60,32 @@
 #define CFE_MISSIONLIB_MSGID_TELECOMMAND_BITS   0x01
 #define CFE_MISSIONLIB_MSGID_TELEMETRY_BITS     0x00
 
-static inline uint16_t CFE_SB_Get_MsgId_Subsystem(const CFE_SB_MsgId_Atom_t *MsgId)
+static inline uint16_t CFE_SB_Get_MsgId_Subsystem(const CFE_SB_MsgId_t *MsgId)
 {
     return (*MsgId >> 8) & 0xFF;
 }
 
-static inline uint16_t CFE_SB_Get_MsgId_Apid(const CFE_SB_MsgId_Atom_t *MsgId)
+static inline uint16_t CFE_SB_Get_MsgId_Apid(const CFE_SB_MsgId_t *MsgId)
 {
     return (*MsgId >> 1) & 0x7F;
 }
 
-static inline uint16_t CFE_SB_Get_MsgId_InterfaceType(const CFE_SB_MsgId_Atom_t *MsgId)
+static inline uint16_t CFE_SB_Get_MsgId_InterfaceType(const CFE_SB_MsgId_t *MsgId)
 {
     return (*MsgId & 0x01);
 }
 
-static inline void CFE_SB_Set_MsgId_Subsystem(CFE_SB_MsgId_Atom_t *MsgId, uint16_t Val)
+static inline void CFE_SB_Set_MsgId_Subsystem(CFE_SB_MsgId_t *MsgId, uint16_t Val)
 {
     *MsgId |= (Val & 0xFF) << 8;
 }
 
-static inline void CFE_SB_Set_MsgId_Apid(CFE_SB_MsgId_Atom_t *MsgId, uint16_t Val)
+static inline void CFE_SB_Set_MsgId_Apid(CFE_SB_MsgId_t *MsgId, uint16_t Val)
 {
     *MsgId |= (Val & 0x7F) << 1;
 }
 
-static inline void CFE_SB_Set_MsgId_InterfaceType(CFE_SB_MsgId_Atom_t *MsgId, uint16_t Val)
+static inline void CFE_SB_Set_MsgId_InterfaceType(CFE_SB_MsgId_t *MsgId, uint16_t Val)
 {
     *MsgId |= (Val & 0x01);
 }

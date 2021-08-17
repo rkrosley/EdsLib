@@ -217,8 +217,10 @@ local function get_flattened_name(node,suffix)
   -- Note that LUA treats "nil" table values as unassigned
   -- So if any of the inputs are nil it will simply be omitted
   output[1 + #output] = get_qualified_name(node)
-  output[1 + #output] = FLAT_SUFFIX_TABLE[node.entity_type]
-  output[1 + #output] = suffix
+  if (output[1]:sub(-2) ~= "_t") then
+    output[1 + #output] = FLAT_SUFFIX_TABLE[node.entity_type]
+    output[1 + #output] = suffix
+  end
 
   local str = output[1]
   for i = 2, #output do

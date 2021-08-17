@@ -78,8 +78,12 @@ local function write_c_struct_typedef(output,node)
         if (ref.entry) then
           output:add_documentation(ref.entry.attributes.shortdescription, ref.entry.longdescription)
         end
+        local memberType = c_name
+        if (memberType:sub(-2) ~= "_t") then
+          memberType = c_name .. "_t"
+        end
         output:write(string.format("%-50s %-30s /* %-3d bits/%-3d bytes */",
-          c_name .. "_t",
+          memberType,
           (ref.name or ref.type.name) .. ";",
           ref.type.resolved_size.bits,
           ref.type.resolved_size.bytes))
@@ -161,7 +165,11 @@ end
 -- -------------------------------------------------
 local function write_c_subrange_typedef(output,node)
   -- C does not do subranges, so just use the basetype
-  return { ctype = node.basetype:get_flattened_name() .. "_t" }
+  local c_name = node.basetype:get_flattened_name()
+  if (c_name:sub(-2) ~= "_t") then
+    c_name = c_name .. "_t"
+  end
+  return { ctype = c_name }
 end
 
 -- -------------------------------------------------
@@ -281,7 +289,11 @@ for ds in SEDS.root:iterate_children(SEDS.basenode_filter) do
         node.edslib_refobj_local_index = c_name .. "_DATADICTIONARY"
         node.edslib_refobj_initializer = string.format("{ %s, %s }", ds.edslib_refobj_global_index, node.edslib_refobj_local_index)
       end
-      node.header_data.typedef_name = c_name .. "_t"
+      if (c_name:sub(-2) == "_t") then
+        node.header_data.typedef_name = c_name
+      else
+        node.header_data.typedef_name = c_name .. "_t"
+      end
 
       if (node.implicit_basetype) then
         output:add_documentation("Implicitly created wrapper for " .. tostring(node.implict_basetype))
