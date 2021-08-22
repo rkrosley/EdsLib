@@ -65,14 +65,50 @@ local function write_c_struct_typedef(output,node)
     -- Note that the XML allows one to specify a container/interface with no members.
     -- but C language generally frowns upon structs with no members.  So this check is
     -- in place to avoid generating such code.
-    if (#node.decode_sequence > 0) then
+    if (output.datasheet_name == "cfe_msg") then
+      print("node.attributes={")
+      for kx, vx in pairs(node.attributes) do
+        print("(" .. kx .. ", " .. vx .. ")")
+      end
+      print("}")
+      print("type of node = " .. type(node) .. ".")
+      print("node.decode_sequence={")
+      for kx, vx in pairs(node.decode_sequence) do
+        local tbl = "{"
+        for jx, wx in pairs(vx) do
+          local itm = ""
+          if (type(wx) == "table") then itm = "table"
+          elseif (type(wx) == "number") then itm = tostring(wx)
+          elseif (type(wx) == "string") then itm = wx
+          elseif (type(wx) == "userdata") then itm = wx:get_flattened_name() or "userdatax"
+          else itm = "type(" .. type(wx) .. ")"
+          end
+          tbl = tbl .. "(" .. jx .. ", " .. itm .. ")"
+        end
+        tbl = tbl .. "}"
+        print("(" .. kx .. ", " .. tbl .. ")")
+      end
+      print("}")
+    end
+    if ((#node.decode_sequence > 0) and (not node.attributes["buffer"] or (node.attributes["buffer"] == "class"))) then
       output:add_documentation(string.format("Structure definition for %s \'%s\'", node.entity_type, node:get_qualified_name()),
         "Data definition signature " .. checksum)
       output:write(string.format("%s /* %s */", struct_name, SEDS.to_safe_identifier(node:get_qualified_name())))
       output:start_group("{")
       for idx,ref in ipairs(node.decode_sequence) do
         local c_name = ref.type:get_flattened_name()
-        if (ref.name and ref.type.max_size) then
+        local memberName = nil
+        if (not ref.name) then
+          local bt = ref.type.basetype
+          if (bt) then
+            if (#bt.decode_sequence == 1) then
+              if (bt.decode_sequence[1].name) then
+                memberName = bt.decode_sequence[1].name
+              end
+            end
+          end
+        end
+        if (ref.name and ref.type.max_size and (ref.type.attributes["buffer"] == "subclassUnion")) then
           c_name = c_name .. "_Buffer"
         end
         if (ref.entry) then
@@ -84,11 +120,18 @@ local function write_c_struct_typedef(output,node)
         end
         output:write(string.format("%-50s %-30s /* %-3d bits/%-3d bytes */",
           memberType,
-          (ref.name or ref.type.name) .. ";",
+          (ref.name or memberName or ref.type.name) .. ";",
           ref.type.resolved_size.bits,
           ref.type.resolved_size.bytes))
       end
       output:end_group("};")
+    elseif (node.attributes["buffer"] == "subclassUnion") then
+      node:debug_print(node)
+      output:add_documentation(string.format("Union rename for %s \'%s\'", node.entity_type, node:get_qualified_name()),
+        "Data definition signature " .. checksum)
+      local base_name = node.basetype:get_flattened_name() .. "_Buffer_t"
+      local rename = node:get_flattened_name()
+      output:write(string.format("typedef union %-50s %s;", base_name, rename))
     end
   end
   return { ctype = struct_name }
@@ -289,48 +332,53 @@ for ds in SEDS.root:iterate_children(SEDS.basenode_filter) do
         node.edslib_refobj_local_index = c_name .. "_DATADICTIONARY"
         node.edslib_refobj_initializer = string.format("{ %s, %s }", ds.edslib_refobj_global_index, node.edslib_refobj_local_index)
       end
-      if (c_name:sub(-2) == "_t") then
-        node.header_data.typedef_name = c_name
-      else
-        node.header_data.typedef_name = c_name .. "_t"
-      end
+      if (node.attributes["buffer"] ~= "subclassUnion") then
+        if (c_name:sub(-2) == "_t") then
+          node.header_data.typedef_name = c_name
+        else
+          node.header_data.typedef_name = c_name .. "_t"
+        end
+        if (node.implicit_basetype) then
+          output:add_documentation("Implicitly created wrapper for " .. tostring(node.implict_basetype))
+          output:write(string.format("typedef %-50s %s;", node.implicit_basetype.header_data.typedef_name, node.header_data.typedef_name))
+        else
+          output:add_documentation(node.attributes.shortdescription,
+            (node.longdescription or "") .. "\n" .. (node.header_data.extra_desc or ""))
+          output:write(string.format("typedef %-50s %s%s;", node.header_data.ctype, node.header_data.typedef_name, node.header_data.typedef_modifier or ""))
+          if (node.resolved_size) then
+            output:write(string.format("  /* %s */", tostring(node.resolved_size)))
+          end
+          output:add_whitespace(1)
+       end
 
-      if (node.implicit_basetype) then
-        output:add_documentation("Implicitly created wrapper for " .. tostring(node.implict_basetype))
-        output:write(string.format("typedef %-50s %s;", node.implicit_basetype.header_data.typedef_name, node.header_data.typedef_name))
-      else
-        output:add_documentation(node.attributes.shortdescription,
-          (node.longdescription or "") .. "\n" .. (node.header_data.extra_desc or ""))
-        output:write(string.format("typedef %-50s %s%s;", node.header_data.ctype, node.header_data.typedef_name, node.header_data.typedef_modifier or ""))
         if (node.resolved_size) then
-          output:write(string.format("  /* %s */", tostring(node.resolved_size)))
+          local packedsize = 0
+          local buffname = node:get_flattened_name()
+          if (node.max_size) then
+            output:write(string.format("union %s_Buffer", buffname))
+            output:start_group("{")
+            output:write(string.format("%-50s BaseObject;", node.header_data.typedef_name))
+            if (node.header_data.typedef_name == "CCSDS_SpacePacket_t") then
+              output:write(string.format("%-50s Byte[%s];", "uint8_t", "sizeof(" .. node.header_data.typedef_name .. ")"))
+            else
+              output:write(string.format("%-50s Byte[%d];", "uint8_t", node.max_size.bytes))
+              local aligntype = (node.max_size.alignment <= 64) and tostring(node.max_size.alignment) or "max"
+              output:write(string.format("%-50s Align%d;", "uint" .. aligntype .. "_t", node.max_size.alignment))
+            end
+            output:end_group("};")
+            output:write(string.format("typedef %-50s %s_Buffer_t;", "union " .. buffname .. "_Buffer", buffname))
+            packedsize = node.max_size.bits
+          else
+            packedsize = node.resolved_size.bits
+          end
+          if (packedsize == 0) then
+            packedsize = 1
+          else
+            packedsize = math.floor((packedsize + 7) / 8)
+          end
+          output:write(string.format("typedef %-50s %s_PackedBuffer_t[%d];", "uint8_t", buffname, packedsize))
+          output:add_whitespace(1)
         end
-        output:add_whitespace(1)
-      end
-
-      if (node.resolved_size) then
-        local packedsize = 0
-        local buffname = node:get_flattened_name()
-        if (node.max_size) then
-          output:write(string.format("union %s_Buffer", buffname))
-          output:start_group("{")
-          output:write(string.format("%-50s BaseObject;", node.header_data.typedef_name))
-          output:write(string.format("%-50s Byte[%d];", "uint8_t", node.max_size.bytes))
-          local aligntype = (node.max_size.alignment <= 64) and tostring(node.max_size.alignment) or "max"
-          output:write(string.format("%-50s Align%d;", "uint" .. aligntype .. "_t", node.max_size.alignment))
-          output:end_group("};")
-          output:write(string.format("typedef %-50s %s_Buffer_t;", "union " .. buffname .. "_Buffer", buffname))
-          packedsize = node.max_size.bits
-        else
-          packedsize = node.resolved_size.bits
-        end
-        if (packedsize == 0) then
-          packedsize = 1
-        else
-          packedsize = math.floor((packedsize + 7) / 8)
-        end
-        output:write(string.format("typedef %-50s %s_PackedBuffer_t[%d];", "uint8_t", buffname, packedsize))
-        output:add_whitespace(1)
       end
     end
   end

@@ -114,6 +114,27 @@
 			</xs:enumeration>
 		</xs:restriction>
 	</xs:simpleType>
+	<xs:simpleType name="bufferSpec">
+		<xs:annotation>
+			<xs:documentation>memory accomodation for base class</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="class">
+				<xs:annotation>
+					<xs:documentation>
+						The memory space allocation should be sufficient for the base class.
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+			<xs:enumeration value="subclassUnion">
+				<xs:annotation>
+					<xs:documentation>
+						The memory space allocation should be sufficient for the longest of the derived classes.
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
+		</xs:restriction>
+	</xs:simpleType>
 	<xs:attributeGroup name="ExtensionSemanticsAttributeGroup">
 		<!-- Add attributes required by a project here.
 		SEDS that use these ad hoc attributes lack standard support for interoperability across agencies. -->
@@ -122,5 +143,6 @@
 		<xs:attribute name="cui" type="xs:string"/>
 		<xs:attribute name="msgid" type="xs:string"/>
 		<xs:attribute name="dataRef" type="seds:dataReferenceType"/>
+		<xs:attribute name="buffer" type="seds:bufferSpec" default="class"/>
 	</xs:attributeGroup>
 </xs:schema>

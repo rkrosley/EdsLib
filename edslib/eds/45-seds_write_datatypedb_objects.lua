@@ -504,6 +504,9 @@ local function write_c_derivative_descriptor(output,basename,node)
     maxbits = node.resolved_size.bits
     bufobj = "_t"
   end
+  if (basename:sub(-2) == "_t") then
+    bufobj = bufobj:sub(1, #bufobj - 2)
+  end
 
   descriptor_fields["MaxSize"] = string.format("{ .Bits = %d, .Bytes = sizeof(%s) }",
     maxbits, basename .. bufobj)
