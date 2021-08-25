@@ -174,19 +174,25 @@ local function get_qualified_name(node)
     CONTAINER_ENTRY_LIST = "Content"
   }
 
-
+  local closeName = ""
+  local farName = ""
   while (node) do
     local nodename = node.name or fixedname_table[node.entity_type]
     if (not result) then
       result = nodename
+      closeName = nodename
     elseif (sep and nodename and node.entity_type ~= "PACKAGEFILE" and node.entity_type ~= "DATASHEET") then
       result = nodename .. sep .. result
       sep = nil
+      farName = nodename
     end
     if (not sep) then
       sep = separator_table[node.entity_type]
     end
     node = node.parent
+  end
+  if ((#closeName > #farName) and (#farName > 0) and (string.sub(closeName, 1, #farName) == farName)) then
+    result = closeName
   end
 
   return result

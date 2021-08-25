@@ -51,7 +51,12 @@ local function write_c_integer_typedef(output,node)
   else
     bits = "max"
   end
-  return { ctype = string.format("%s%s_t", node.is_signed and "int" or "uint", bits) }
+  local interp = node.attributes["interpretation"]
+  if ((bits == 32) and (node.attributes["unit"] == "byte") and (not interp or (interp ~= "position"))) then
+    return { ctype = "size_t"}
+  else
+    return { ctype = string.format("%s%s_t", node.is_signed and "int" or "uint", bits) }
+  end
 end
 
 -- -------------------------------------------------
