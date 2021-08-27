@@ -64,6 +64,7 @@ typedef int socklen_t;
 #include "cfe_missionlib_api.h"
 #include "cfe_missionlib_runtime.h"
 #include "ccsds_spacepacket_eds_typedefs.h"
+#include "cfe_msg_eds_typedefs.h"
 
 const char DEFAULT_COMPONENT[] = "Application";
 
@@ -189,8 +190,8 @@ typedef struct {
 } CommandData_t;
 
 
-CCSDS_SpacePacket_Buffer_t CommandBuffer;
-static uint8_t PackedCommand[sizeof(CCSDS_SpacePacket_Buffer_t)];
+CFE_MSG_Message_PackedBuffer_t CommandBuffer;
+static uint8_t PackedCommand[sizeof(CFE_MSG_Message_PackedBuffer_t)];
 
 /*
 ** Declare the global command data
@@ -414,7 +415,7 @@ int main(int argc, char *argv[]) {
     }
 
     EdsRc = EdsLib_DataTypeDB_GetTypeInfo(&EDS_DATABASE,
-            EDSLIB_MAKE_ID(EDS_INDEX(CCSDS_SPACEPACKET), CCSDS_PriHdr_DATADICTIONARY),
+            EDSLIB_MAKE_ID(EDS_INDEX(CCSDS_SPACEPACKET), CFE_MSG_Message_t_DATADICTIONARY),
             &CommandData.EdsHeaderInfo);
     if (EdsRc != EDSLIB_SUCCESS)
     {

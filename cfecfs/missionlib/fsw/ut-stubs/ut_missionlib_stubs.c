@@ -266,7 +266,7 @@ void CFE_SB_UnmapPublisherComponent(CFE_SB_Publisher_Component_t *Output, const 
     }
 }
 
-void CFE_SB_Get_PubSub_Parameters(CFE_SB_SoftwareBus_PubSub_Interface_t *Params, const CCSDS_SpacePacket_t *Packet)
+void CFE_SB_Get_PubSub_Parameters(CFE_SB_SoftwareBus_PubSub_Interface_t *Params, const CFE_MSG_Message_t *Packet)
 {
     UT_DEFAULT_IMPL(CFE_SB_Get_PubSub_Parameters);
 
@@ -277,7 +277,7 @@ void CFE_SB_Get_PubSub_Parameters(CFE_SB_SoftwareBus_PubSub_Interface_t *Params,
 }
 
 
-void CFE_SB_Set_PubSub_Parameters(CCSDS_SpacePacket_t *Packet, const CFE_SB_SoftwareBus_PubSub_Interface_t *Params)
+void CFE_SB_Set_PubSub_Parameters(CFE_MSG_Message_t *Packet, const CFE_SB_SoftwareBus_PubSub_Interface_t *Params)
 {
     UT_DEFAULT_IMPL(CFE_SB_Set_PubSub_Parameters);
 

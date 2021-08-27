@@ -51,8 +51,10 @@ void CFE_SB_UnmapPublisherComponent(CFE_SB_Publisher_Component_t *Output, const 
 uint8_t CFE_SB_PubSub_IsListenerComponent(const CFE_SB_SoftwareBus_PubSub_Interface_t *Params);
 uint8_t CFE_SB_PubSub_IsPublisherComponent(const CFE_SB_SoftwareBus_PubSub_Interface_t *Params);
 
-void CFE_SB_Get_PubSub_Parameters(CFE_SB_SoftwareBus_PubSub_Interface_t *Params, const CCSDS_SpacePacket_t *Packet);
-void CFE_SB_Set_PubSub_Parameters(CCSDS_SpacePacket_t *Packet, const CFE_SB_SoftwareBus_PubSub_Interface_t *Params);
+void CFE_SB_Get_PubSub_Parameters(CFE_SB_SoftwareBus_PubSub_Interface_t *Params,
+                                  const CCSDS_SPACEPACKET_QUALIFIED_HEADER_TYPE *  Packet);
+void CFE_SB_Set_PubSub_Parameters(CCSDS_SPACEPACKET_QUALIFIED_HEADER_TYPE *              Packet,
+                                  const CFE_SB_SoftwareBus_PubSub_Interface_t *Params);
 
 #ifdef __cplusplus
 } /* extern "C" */

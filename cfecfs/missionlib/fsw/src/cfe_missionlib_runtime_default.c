@@ -156,36 +156,50 @@ uint8_t CFE_SB_PubSub_IsPublisherComponent(const CFE_SB_SoftwareBus_PubSub_Inter
     return (Params->MsgId != 0 && CFE_SB_Get_MsgId_InterfaceType(&Params->MsgId) == CFE_MISSIONLIB_MSGID_TELEMETRY_BITS);
 }
 
-void CFE_SB_Get_PubSub_Parameters(CFE_SB_SoftwareBus_PubSub_Interface_t *Params, const CCSDS_SpacePacket_t *Packet)
+void CFE_SB_Get_PubSub_Parameters(CFE_SB_SoftwareBus_PubSub_Interface_t *Params,
+                                  const CCSDS_SPACEPACKET_QUALIFIED_HEADER_TYPE *  Packet)
 {
     Params->MsgId = 0;
 
-    if (Packet->Hdr.BaseHdr.SecHdrFlags != 0)
+    /* if (Packet->Pri.SecHdrFlags != 0) */
+    if ((Packet->Pri.StreamId[0] & 0x18) != 0)
     {
-        CFE_SB_Set_MsgId_InterfaceType(&Params->MsgId, Packet->Hdr.BaseHdr.SecHdrFlags >> 1);
+        /* CFE_SB_Set_MsgId_InterfaceType(&Params->MsgId, Packet->Pri.SecHdrFlags >> 1); */
+        CFE_SB_Set_MsgId_InterfaceType(&Params->MsgId, (Packet->Pri.StreamId[0] & 0x18) >> 4);
 #if CCSDS_ACTIVE_VERSION == CCSDS_PriHdr_VERSION
-        CFE_SB_Set_MsgId_Apid(&Params->MsgId, Packet->Hdr.BaseHdr.AppId & 0x3F);
-        CFE_SB_Set_MsgId_Subsystem(&Params->MsgId, Packet->Hdr.BaseHdr.AppId >> 6);
+        /* CFE_SB_Set_MsgId_Apid(&Params->MsgId, Packet->Pri.AppId & 0x3F); */
+        CFE_SB_Set_MsgId_Apid(&Params->MsgId, Packet->Pri.StreamId[1] & 0x3F);
+        /* CFE_SB_Set_MsgId_Subsystem(&Params->MsgId, Packet->Pri.AppId >> 6); */
+        CFE_SB_Set_MsgId_Subsystem(
+            &Params->MsgId, ((Packet->Pri.StreamId[0] << 8) | (Packet->Pri.StreamId[1])) >> 6);
 #elif CCSDS_ACTIVE_VERSION == CCSDS_APIDQHdr_VERSION
-        CFE_SB_Set_MsgId_Apid(&Params->MsgId, Packet->Hdr.BaseHdr.AppId);
-        CFE_SB_Set_MsgId_Subsystem(&Params->MsgId, Packet->Hdr.ApidQ.SubsystemId);
+        /* CFE_SB_Set_MsgId_Apid(&Params->MsgId, Packet->Pri.AppId); */
+        CFE_SB_Set_MsgId_Apid(&Params->MsgId, Packet->Pri.StreamId[1] & 0x3F);
+        CFE_SB_Set_MsgId_Subsystem(&Params->MsgId, Packet->Ext.SubsystemId);
 #else
 #error "MsgId Mappings not defined for this header style"
 #endif
     }
 }
 
-void CFE_SB_Set_PubSub_Parameters(CCSDS_SpacePacket_t *Packet, const CFE_SB_SoftwareBus_PubSub_Interface_t *Params)
+void CFE_SB_Set_PubSub_Parameters(CCSDS_SPACEPACKET_QUALIFIED_HEADER_TYPE *              Packet,
+                                  const CFE_SB_SoftwareBus_PubSub_Interface_t *Params)
 {
-    Packet->Hdr.BaseHdr.SecHdrFlags = (CFE_SB_Get_MsgId_InterfaceType(&Params->MsgId) << 1) | 0x01;
+    /* Packet->Pri.SecHdrFlags = (CFE_SB_Get_MsgId_InterfaceType(&Params->MsgId) << 1) | 0x01; */
+    Packet->Pri.StreamId[0] = (Packet->Pri.StreamId[0] & 0xE7) | ((CFE_SB_Get_MsgId_InterfaceType(&Params->MsgId) << 4) | 0x80);
 #if CCSDS_ACTIVE_VERSION == CCSDS_PriHdr_VERSION
-    Packet->Hdr.BaseHdr.AppId =
-            (CFE_SB_Get_MsgId_Apid(&Params->MsgId) & 0x3F) |
-            (CFE_SB_Get_MsgId_Subsystem(&Params->MsgId) << 6);
+    /* Packet->Pri.AppId =
+        (CFE_SB_Get_MsgId_Apid(&Params->MsgId) & 0x3F) | (CFE_SB_Get_MsgId_Subsystem(&Params->MsgId) << 6); */
+    Packet->Pri.StreamId[1] =
+        (CFE_SB_Get_MsgId_Apid(&Params->MsgId) & 0x3F) | ((CFE_SB_Get_MsgId_Subsystem(&Params->MsgId) << 6) & 0x0080);
+    Packet->Pri.StreamId[0] =
+        (Packet->Pri.StreamId[0] & 0xC0) & ((CFE_SB_Get_MsgId_Subsystem(&Params->MsgId) << 6) & 0xFF00);
 #elif CCSDS_ACTIVE_VERSION == CCSDS_APIDQHdr_VERSION
-    Packet->Hdr.BaseHdr.AppId = CFE_SB_Get_MsgId_Apid(&Params->MsgId);
-    Packet->Hdr.ApidQ.SubsystemId = CFE_SB_Get_MsgId_Subsystem(&Params->MsgId);
-    Packet->Hdr.ApidQ.SystemId = 0x1234; /* not used yet */
+    /* Packet->Pri.AppId = CFE_SB_Get_MsgId_Apid(&Params->MsgId); */
+    Packet->Pri.StreamId[0] = (Packet->Pri.StreamId[0] & 0xC0) & (CFE_SB_Get_MsgId_Apid(&Params->MsgId) & 0xFF00 );
+    Packet->Pri.StreamId[1] = CFE_SB_Get_MsgId_Apid(&Params->MsgId) & 0x00FF;
+    Packet->Ext.SubsystemId = CFE_SB_Get_MsgId_Subsystem(&Params->MsgId);
+    Packet->Ext.SystemId = 0x1234; /* not used yet */
 #else
 #error "MsgId Mappings not defined for this header style"
 #endif

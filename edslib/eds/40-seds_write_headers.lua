@@ -64,7 +64,11 @@ end
 -- -------------------------------------------------
 local function write_c_struct_typedef(output,node)
   local checksum = node.resolved_size.checksum
-  local struct_name = checksum and string.format("struct %s_%s", output.datasheet_name, checksum) or "void"
+  local memBuf = "struct"
+  if (node.attributes["buffer"] == "memberUnion") then
+    memBuf = "union"
+  end
+  local struct_name = checksum and string.format("%s %s_%s", memBuf, output.datasheet_name, checksum) or "void"
   if (not output.checksum_table[checksum]) then
     output.checksum_table[checksum] = struct_name
     -- Note that the XML allows one to specify a container/interface with no members.
@@ -95,7 +99,7 @@ local function write_c_struct_typedef(output,node)
       end
       print("}")
     end
-    if ((#node.decode_sequence > 0) and (not node.attributes["buffer"] or (node.attributes["buffer"] == "class"))) then
+    if ((#node.decode_sequence > 0) and (not node.attributes["buffer"] or (node.attributes["buffer"] == "class") or (node.attributes["buffer"] == "memberUnion"))) then
       output:add_documentation(string.format("Structure definition for %s \'%s\'", node.entity_type, node:get_qualified_name()),
         "Data definition signature " .. checksum)
       output:write(string.format("%s /* %s */", struct_name, SEDS.to_safe_identifier(node:get_qualified_name())))
@@ -134,9 +138,9 @@ local function write_c_struct_typedef(output,node)
       node:debug_print(node)
       output:add_documentation(string.format("Union rename for %s \'%s\'", node.entity_type, node:get_qualified_name()),
         "Data definition signature " .. checksum)
-      local base_name = node.basetype:get_flattened_name() .. "_Buffer_t"
+      local base_name = node.basetype:get_flattened_name() .. "_t"
       local rename = node:get_flattened_name()
-      output:write(string.format("typedef union %-50s %s;", base_name, rename))
+      output:write(string.format("typedef struct %-50s %s;", base_name, rename))
     end
   end
   return { ctype = struct_name }
@@ -354,7 +358,7 @@ for ds in SEDS.root:iterate_children(SEDS.basenode_filter) do
             output:write(string.format("  /* %s */", tostring(node.resolved_size)))
           end
           output:add_whitespace(1)
-       end
+        end
 
         if (node.resolved_size) then
           local packedsize = 0
@@ -363,7 +367,7 @@ for ds in SEDS.root:iterate_children(SEDS.basenode_filter) do
             output:write(string.format("union %s_Buffer", buffname))
             output:start_group("{")
             output:write(string.format("%-50s BaseObject;", node.header_data.typedef_name))
-            if (node.header_data.typedef_name == "CCSDS_SpacePacket_t") then
+            if (node.header_data.typedef_name == "CFE_MSG_Message_t") then
               output:write(string.format("%-50s Byte[%s];", "uint8_t", "sizeof(" .. node.header_data.typedef_name .. ")"))
             else
               output:write(string.format("%-50s Byte[%d];", "uint8_t", node.max_size.bytes))

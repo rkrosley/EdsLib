@@ -41,6 +41,7 @@
 #include "cfe_missionlib_api.h"
 #include "cfe_missionlib_lua_softwarebus.h"
 #include "ccsds_spacepacket_eds_typedefs.h"
+#include "cfe_msg_eds_typedefs.h"
 
 
 /*
@@ -137,8 +138,8 @@ void TestCtrl_ConnHandler(void)
 #endif
 
 #define COMMAND_MAX_ARGS        8
-#define NETBUFFER_MAX_SIZE      (64 + ((sizeof(CCSDS_SpacePacket_Buffer_t) * 4) / 3))
-#define OBJBUFFER_MAX_SIZE      (64 + sizeof(CCSDS_SpacePacket_Buffer_t))
+#define NETBUFFER_MAX_SIZE      (64 + ((sizeof(CFE_MSG_Message_PackedBuffer_t) * 4) / 3))
+#define OBJBUFFER_MAX_SIZE      (64 + sizeof(CFE_MSG_Message_PackedBuffer_t))
 
 struct
 {

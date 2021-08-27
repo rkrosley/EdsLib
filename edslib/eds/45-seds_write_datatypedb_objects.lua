@@ -89,11 +89,11 @@ end
 -- -----------------------------------------------------------------------
 -- Get standard fields for a "container entry" in the C DB
 -- -----------------------------------------------------------------------
-local function write_normal_entry_handler(output,ds,parent_name)
+local function write_normal_entry_handler(output,ds,parent_name, ctype)
   return {
     EntryType = "EDSLIB_ENTRYTYPE_" .. (ds.entry and ds.entry.entity_type or "BASE_TYPE"),
-    Offset = string.format("{ .Bits = %d, .Bytes = offsetof(struct %s,%s) }",
-        ds.bit, parent_name, ds.name or ds.type.name),
+    Offset = string.format("{ .Bits = %d, .Bytes = offsetof(%s %s,%s) }",
+        ds.bit, ctype, parent_name, ds.name or ds.type.name),
     RefObj = ds.type and ds.type.edslib_refobj_initializer
   }
 end
@@ -356,12 +356,17 @@ local function write_c_decode_sequence(output, listnode)
   -- Call handlers to get C DB field values for every entry in the decode sequence
   if (not output.checksum_table[checksum]) then
     output.checksum_table[checksum] = objname
-
+    local ctype
+    if (listnode.attributes and listnode.attributes.buffer == "memberUnion") then
+      ctype = "union"
+    else
+      ctype = "struct"
+    end
     for i,ds in ipairs(listnode.decode_sequence) do
       entrylist[i] = do_get_fields({
         write_normal_entry_handler,
         ds.entry and special_entry_handler_table[ds.entry.entity_type]
-      }, nil, output, ds, objname)
+      }, nil, output, ds, objname, ctype)
     end
 
     output:write(string.format("static const EdsLib_FieldDetailEntry_t %s[] =", nameext))

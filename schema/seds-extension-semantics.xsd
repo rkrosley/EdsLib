@@ -126,6 +126,13 @@
 					</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
+			<xs:enumeration value="memberUnion">
+				<xs:annotation>
+					<xs:documentation>
+						The memory space allocation should be sufficient for the longest of the entries in the entry list.
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
 			<xs:enumeration value="subclassUnion">
 				<xs:annotation>
 					<xs:documentation>

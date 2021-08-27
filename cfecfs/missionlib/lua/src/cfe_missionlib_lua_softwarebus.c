@@ -441,7 +441,7 @@ static int CFE_MissionLib_Lua_IdentifyMessage(lua_State *lua)
     EdsLib_Id_t EdsId;
     int32_t Status;
 
-    EdsId = EDSLIB_MAKE_ID(EDS_INDEX(CCSDS_SPACEPACKET), CCSDS_SpacePacket_DATADICTIONARY);
+    EdsId = EDSLIB_MAKE_ID(EDS_INDEX(CCSDS_SPACEPACKET), CFE_MSG_Message_t_DATADICTIONARY);
     Status = EdsLib_DataTypeDB_GetDerivedInfo(DbObj->GD, EdsId, &DerivInfo);
     if (Status != EDSLIB_SUCCESS)
     {
