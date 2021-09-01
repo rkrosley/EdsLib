@@ -151,7 +151,7 @@ void LoadTemplateFile(lua_State *lua, const char *Filename)
     obj_idx = lua_gettop(lua);
     lua_getglobal(lua, "EdsDB");
     lua_getfield(lua, -1, "NewObject");
-    lua_pushstring(lua, CFE_TBL_FileDefPtr->ObjectType);
+    lua_pushnumber(lua, (double)(CFE_TBL_FileDefPtr->ObjectSize));
     lua_pcall(lua, 1, 1, 1);    /* Call "MISSION_New_Object" for the object type */
     EdsLib_LuaBinding_GetNativeObject(lua, -1, &tgtptr, &tgtsize);
     if (tgtsize > 0)

@@ -180,13 +180,13 @@ int main(int argc, char *argv[])
     }
 
     Status = EdsLib_DataTypeDB_UnpackPartialObject(&EDS_DATABASE, &EdsId,
-            LocalBuffer.Byte, NetworkBuffer, sizeof(LocalBuffer), 8 * n, 0);
+            (void *)(&LocalBuffer), NetworkBuffer, sizeof(LocalBuffer), 8 * n, 0);
     if (Status != EDSLIB_SUCCESS)
     {
         return Status;
     }
 
-    CFE_SB_Get_PubSub_Parameters(&PubSubParams, &LocalBuffer.BaseObject);
+    CFE_SB_Get_PubSub_Parameters(&PubSubParams, (CCSDS_SPACEPACKET_QUALIFIED_HEADER_TYPE *)(&LocalBuffer));
     CFE_SB_UnmapPublisherComponent(&PublisherParams, &PubSubParams);
 
     Status = CFE_MissionLib_GetArgumentType(&CFE_SOFTWAREBUS_INTERFACE, CFE_SB_Telemetry_Interface_ID,
@@ -196,7 +196,7 @@ int main(int argc, char *argv[])
         return Status;
     }
 
-    Status = EdsLib_DataTypeDB_UnpackPartialObject(&EDS_DATABASE, &EdsId, LocalBuffer.Byte, NetworkBuffer,
+    Status = EdsLib_DataTypeDB_UnpackPartialObject(&EDS_DATABASE, &EdsId, (void*)(&LocalBuffer), NetworkBuffer,
             sizeof(LocalBuffer), 8 * n, TypeInfo.Size.Bytes);
     if (Status != EDSLIB_SUCCESS)
     {
@@ -206,14 +206,14 @@ int main(int argc, char *argv[])
     printf("Formatcode=%08lx / %s\n",(unsigned long)EdsId,
             EdsLib_DisplayDB_GetTypeName(&EDS_DATABASE, EdsId, TempBuffer, sizeof(TempBuffer)));
 
-    Status = EdsLib_DataTypeDB_VerifyUnpackedObject(&EDS_DATABASE, EdsId, LocalBuffer.Byte,
+    Status = EdsLib_DataTypeDB_VerifyUnpackedObject(&EDS_DATABASE, EdsId, (void*)(&LocalBuffer),
             NetworkBuffer, EDSLIB_DATATYPEDB_RECOMPUTE_NONE);
     if (Status != EDSLIB_SUCCESS)
     {
         printf("NOTE - EDS VERIFICATION FAILED: code=%d\n", (int)Status);
     }
 
-    EdsLib_DisplayDB_IterateAllEntities(&EDS_DATABASE, EdsId, TlmUtilDisplay, LocalBuffer.Byte);
+    EdsLib_DisplayDB_IterateAllEntities(&EDS_DATABASE, EdsId, TlmUtilDisplay, (void*)(&LocalBuffer));
     printf("\n");
 
   }/* end of server infinite loop */

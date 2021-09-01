@@ -74,31 +74,6 @@ local function write_c_struct_typedef(output,node)
     -- Note that the XML allows one to specify a container/interface with no members.
     -- but C language generally frowns upon structs with no members.  So this check is
     -- in place to avoid generating such code.
-    if (output.datasheet_name == "cfe_msg") then
-      print("node.attributes={")
-      for kx, vx in pairs(node.attributes) do
-        print("(" .. kx .. ", " .. vx .. ")")
-      end
-      print("}")
-      print("type of node = " .. type(node) .. ".")
-      print("node.decode_sequence={")
-      for kx, vx in pairs(node.decode_sequence) do
-        local tbl = "{"
-        for jx, wx in pairs(vx) do
-          local itm = ""
-          if (type(wx) == "table") then itm = "table"
-          elseif (type(wx) == "number") then itm = tostring(wx)
-          elseif (type(wx) == "string") then itm = wx
-          elseif (type(wx) == "userdata") then itm = wx:get_flattened_name() or "userdatax"
-          else itm = "type(" .. type(wx) .. ")"
-          end
-          tbl = tbl .. "(" .. jx .. ", " .. itm .. ")"
-        end
-        tbl = tbl .. "}"
-        print("(" .. kx .. ", " .. tbl .. ")")
-      end
-      print("}")
-    end
     if ((#node.decode_sequence > 0) and (not node.attributes["buffer"] or (node.attributes["buffer"] == "class") or (node.attributes["buffer"] == "memberUnion"))) then
       output:add_documentation(string.format("Structure definition for %s \'%s\'", node.entity_type, node:get_qualified_name()),
         "Data definition signature " .. checksum)
@@ -135,7 +110,6 @@ local function write_c_struct_typedef(output,node)
       end
       output:end_group("};")
     elseif (node.attributes["buffer"] == "subclassUnion") then
-      node:debug_print(node)
       output:add_documentation(string.format("Union rename for %s \'%s\'", node.entity_type, node:get_qualified_name()),
         "Data definition signature " .. checksum)
       local base_name = node.basetype:get_flattened_name() .. "_t"
@@ -385,7 +359,11 @@ for ds in SEDS.root:iterate_children(SEDS.basenode_filter) do
           else
             packedsize = math.floor((packedsize + 7) / 8)
           end
-          output:write(string.format("typedef %-50s %s_PackedBuffer_t[%d];", "uint8_t", buffname, packedsize))
+          local buffNameStem = buffname
+           if (buffNameStem:sub(-2) == "_t") then
+             buffNameStem = string.sub(buffNameStem, 1, #buffNameStem - 2)
+           end
+          output:write(string.format("typedef %-50s %s_PackedBuffer_t[%d];", "uint8_t", buffNameStem, packedsize))
           output:add_whitespace(1)
         end
       end

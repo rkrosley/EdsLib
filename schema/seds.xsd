@@ -2006,6 +2006,7 @@
 			</xs:documentation>
 		</xs:annotation>
 		<xs:attribute name="transaction" type="seds:NameType" />
+		<xs:attribute name="transactionEntry" type="seds:EntryRefType"/>
 		<xs:attribute name="failed" type="xs:boolean"
 			default="false" />
 	</xs:complexType>
@@ -2019,6 +2020,7 @@
 		<xs:complexContent>
 			<xs:extension base="seds:StatementType">
 				<xs:attribute name="transaction" type="seds:NameType" />
+				<xs:attribute name="transactionEntry" type="seds:EntryRefType"/>
 				<xs:attribute name="failed" type="xs:boolean"
 					default="false" />
 			</xs:extension>

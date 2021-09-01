@@ -266,8 +266,10 @@ void ProcessParameterArgument(char *optarg, CommandData_t *CommandData)
                Desc.EntityInfo.Offset.Bytes);
    }
 
+   void* typeless = &CommandBuffer;
+   uint8_t* arrayed = (uint8_t *)typeless;
    Result = EdsLib_Scalar_FromString(&EDS_DATABASE, Desc.EntityInfo.EdsId,
-           &CommandBuffer.Byte[CommandData->EdsPayloadInfo.Offset.Bytes + Desc.EntityInfo.Offset.Bytes],
+           &(arrayed[CommandData->EdsPayloadInfo.Offset.Bytes + Desc.EntityInfo.Offset.Bytes]),
            value);
    if (Result != 0)
    {
@@ -501,7 +503,7 @@ int main(int argc, char *argv[]) {
 
     CFE_SB_MapListenerComponent(&CommandData.PubSub, &CommandData.Params);
 
-    CFE_SB_Set_PubSub_Parameters(&CommandBuffer.BaseObject, &CommandData.PubSub);
+    CFE_SB_Set_PubSub_Parameters((void *)(&CommandBuffer), &CommandData.PubSub);
 
     EdsRc = CFE_MissionLib_GetArgumentType(&CFE_SOFTWAREBUS_INTERFACE, CFE_SB_Telecommand_Interface_ID,
             CommandData.Params.Telecommand.TopicId, 1, 1, &CommandData.IntfArg);
@@ -602,7 +604,7 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    EdsRc = EdsLib_DataTypeDB_InitializeNativeObject(&EDS_DATABASE, CommandData.ActualArg, CommandBuffer.Byte);
+    EdsRc = EdsLib_DataTypeDB_InitializeNativeObject(&EDS_DATABASE, CommandData.ActualArg, (void *)(&CommandBuffer));
     if (EdsRc != EDSLIB_SUCCESS)
     {
         printf("Error in EdsLib_DataTypeDB_InitializeNativeObject(): %d\n", (int)EdsRc);
@@ -623,9 +625,11 @@ int main(int argc, char *argv[]) {
      * Note for the length field, the size of the primary header must be subtracted.
      * Hardcoding the sequence number / flags field for now.
      */
-    CommandBuffer.BaseObject.Hdr.BaseHdr.SeqFlag = 0x3;
+    void* detype = &CommandBuffer;
+    CFE_MSG_Message_t* retype = detype;
+    retype->CCSDS.Pri.Sequence[0] |= 0xC0;
     EdsLib_DataTypeDB_PackCompleteObject(&EDS_DATABASE, &CommandData.ActualArg,
-            PackedCommand, CommandBuffer.Byte,
+            PackedCommand, (void *)(&CommandBuffer),
             sizeof(PackedCommand) * 8, CommandData.EdsTypeInfo.Size.Bytes);
 
     /*
