@@ -133,6 +133,13 @@
 					</xs:documentation>
 				</xs:annotation>
 			</xs:enumeration>
+			<xs:enumeration value="packed">
+				<xs:annotation>
+					<xs:documentation>
+						The memory space allocation should be sufficient for the encoded form, with bit fields.
+					</xs:documentation>
+				</xs:annotation>
+			</xs:enumeration>
 			<xs:enumeration value="subclassUnion">
 				<xs:annotation>
 					<xs:documentation>

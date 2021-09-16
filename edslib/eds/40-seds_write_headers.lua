@@ -60,6 +60,175 @@ local function write_c_integer_typedef(output,node)
 end
 
 -- -------------------------------------------------
+-- Helper functions to compute accessors for bit fields
+-- -------------------------------------------------
+local function compute_c_struct_name(node)
+  local c_name = node:get_flattened_name()
+  local typedefName = nil
+  if (node.attributes["buffer"] ~= "subclassUnion") then
+    if (c_name:sub(-2) == "_t") then
+      typedefName = c_name
+    else
+      typedefName = c_name .. "_t"
+    end
+  end
+  return typedefName
+end
+
+local function compute_c_buffer_name(node)
+  local c_name = node:get_flattened_name()
+  local typedefName = nil
+  if (node.attributes["buffer"] ~= "subclassUnion") then
+    if (c_name:sub(-2) == "_t") then
+      typedefName = string.sub(c_name, 1, #c_name - 2) .. "_PackedBuffer_t"
+    else
+      typedefName = c_name .. "_PackedBuffer_t"
+    end
+  end
+  return typedefName
+end
+
+local function compute_c_struct_member_name(ref)
+  local memberName = nil
+  if (not ref.name) then
+    local bt = ref.type.basetype
+    if (bt) then
+      if (#bt.decode_sequence == 1) then
+        if (bt.decode_sequence[1].name) then
+          memberName = bt.decode_sequence[1].name
+        end
+      end
+    end
+  end
+  memberName = (ref.name or memberName or ref.type.name)
+  return memberName
+end
+
+local function compute_c_struct_member_type(ref)
+  local typeRef = ref.type
+  if (typeRef.implicit_basetype) then
+    typeRef = typeRef.implicit_basetype
+  end
+  local c_name = typeRef:get_flattened_name()
+  if (typeRef.name and typeRef.max_size and (typeRef.attributes["buffer"] == "subclassUnion")) then
+    c_name = c_name .. "_Buffer"
+  end
+  if (c_name:sub(-2) ~= "_t") then
+    c_name = c_name .. "_t"
+  end
+  return c_name
+end
+
+local function compute_c_struct_package_name(node)
+  local pkgName = node.name
+  if (node.entity_type ~= "PACKAGE") then
+    pkgName = compute_c_struct_package_name(node.parent)
+  end
+  if (not pkgName) then
+    pkgName = "nil"
+  end
+  return pkgName
+end
+
+local function write_c_struct_accessors(output,node)
+  local alignment = 0
+  for idx,ref in ipairs(node.decode_sequence) do
+    local bitsWide = ref.type.resolved_size.bits
+    local bitsOnLeft = alignment % 8
+    local byteOffset = math.floor(alignment / 8)
+    local bitsOnRight = (bitsOnLeft + bitsWide) % 8
+    if (bitsOnRight > 0) then
+      bitsOnRight = 8 - bitsOnRight
+    end
+    local workBits = bitsOnLeft + bitsWide + bitsOnRight
+    local maskStr = ""
+    if (bitsWide < 16) then
+      local mask = ((2 ^ bitsWide) - 1) << bitsOnRight
+      maskStr = string.format("%x", mask)
+      if (#maskStr == 1) then
+        maskStr = "000" .. maskStr
+      elseif (#maskStr == 2) then
+        maskStr = "00" .. maskStr
+      elseif (#maskStr == 3) then
+        maskStr = "0" .. maskStr
+      end
+    end
+    if ((not node.attributes["buffer"] or ((node.attributes["buffer"] ~= "packed") and (node.attributes["buffer"] ~= "class"))) and (((bitsOnLeft == 0) and (bitsOnRight == 0)) or (workBits > 16) or (#maskStr ~= 4))) then
+      -- A bit accessor is unnecessary or unsupported.
+    else
+      if (ref.entry) then
+        output:add_documentation(ref.entry.attributes.shortdescription, ref.entry.longdescription)
+      end
+      local structName = compute_c_struct_name(node)
+      local bufferType = compute_c_buffer_name(node)
+      local memberType = compute_c_struct_member_type(ref)
+      local memberName = compute_c_struct_member_name(ref)
+      local pkgName = compute_c_struct_package_name(node)
+      output:write(string.format("static inline int32_t %s_get_%s(const %s *In, %s *Out)", pkgName, memberName, bufferType, memberType))
+      output:write("{")
+      output:write("  if (In == NULL || Out == NULL)")
+      output:write("  {")
+      output:write("    return 0xc0000001;")
+      output:write("  }")
+      output:write(string.format("  %s *buf = (%s *)In;", bufferType, bufferType))
+      if (workBits == 8) then
+        if (#maskStr == 0) then
+          output:write(string.format("  uint8_t asw = (*buf)[%d];", byteOffset))
+        else
+          output:write(string.format("  uint8_t asw = (*buf)[%d] & 0x%s;", byteOffset, string.sub(maskStr, 3, 4)))
+        end
+      else
+        if (#maskStr == 0) then
+          output:write(string.format("  uint16_t asw = ((*buf)[%d] << 8) | (*buf)[%d];", byteOffset, byteOffset + 1))
+        else
+          output:write(string.format("  uint16_t asw = (((*buf)[%d] << 8) | (*buf)[%d]) & 0x%s;", byteOffset, byteOffset + 1, maskStr))
+        end
+      end
+      if (bitsOnRight > 0) then
+        output:write(string.format("  asw = asw >> %d;", bitsOnRight))
+      end
+      output:write(string.format("  *Out = (%s)asw;", memberType))
+      output:write("  return 0;")
+      output:write("}")
+      output:write("")
+      output:write(string.format("static inline int32_t %s_set_%s(%s *Out, const %s In)", pkgName, memberName, bufferType, memberType))
+      output:write("{")
+      output:write("  if (Out == NULL)")
+      output:write("  {")
+      output:write("    return 0xc0000001;")
+      output:write("  }")
+      output:write(string.format("  %s *buf = (%s *)Out;", bufferType, bufferType))
+      if (workBits == 8) then
+        if (#maskStr == 0) then
+          output:write(string.format("  (*buf)[%d] = In;", byteOffset))
+        else
+          output:write(string.format("  (*buf)[%d] = ((*buf)[%d] & ~(0x%s)) | ((In << %d) & 0x%s);",
+            byteOffset, byteOffset, string.sub(maskStr, 3, 4), bitsOnRight, string.sub(maskStr, 3, 4)))
+        end
+      elseif (bitsOnRight == 0) then
+        if (#maskStr == 0) then
+          output:write(string.format("  (*buf)[%d] = (In >> 8);", byteOffset))
+          output:write(string.format("  (*buf)[%d] = (In & 0xFF);", byteOffset + 1))
+        else
+          output:write(string.format("  (*buf)[%d] = ((*buf)[%d] & ~(0x%s)) | ((In & 0x%s) >> 8);",
+            byteOffset, byteOffset, string.sub(maskStr, 1, 2), maskStr))
+          output:write(string.format("  (*buf)[%d] = ((*buf)[%d] & ~(0x%s)) | ((In & 0x%s) & 0xFF);",
+            byteOffset + 1, byteOffset + 1, string.sub(maskStr, 3, 4), maskStr))
+        end
+      else
+        output:write(string.format("  (*buf)[%d] = ((*buf)[%d] & ~(0x%s)) | (((In << %d) & 0x%s) >> 8);",
+          byteOffset, byteOffset, string.sub(maskStr, 1, 2), bitsOnRight, maskStr))
+        output:write(string.format("  (*buf)[%d] = ((*buf)[%d] & ~(0x%s)) | (((In << %d) & 0x%s) & 0xFF);",
+          byteOffset + 1, byteOffset + 1, string.sub(maskStr, 3, 4), bitsOnRight, maskStr))
+      end
+      output:write("  return 0;")
+      output:write("}")
+    end
+    alignment = alignment + bitsWide
+  end
+end
+
+-- -------------------------------------------------
 -- Helper function to write a structure typedef
 -- -------------------------------------------------
 local function write_c_struct_typedef(output,node)
@@ -74,7 +243,7 @@ local function write_c_struct_typedef(output,node)
     -- Note that the XML allows one to specify a container/interface with no members.
     -- but C language generally frowns upon structs with no members.  So this check is
     -- in place to avoid generating such code.
-    if ((#node.decode_sequence > 0) and (not node.attributes["buffer"] or (node.attributes["buffer"] == "class") or (node.attributes["buffer"] == "memberUnion"))) then
+    if ((#node.decode_sequence > 0) and (not node.attributes["buffer"] or (node.attributes["buffer"] == "class") or (node.attributes["buffer"] == "memberUnion") or (node.attributes["buffer"] == "packed"))) then
       output:add_documentation(string.format("Structure definition for %s \'%s\'", node.entity_type, node:get_qualified_name()),
         "Data definition signature " .. checksum)
       output:write(string.format("%s /* %s */", struct_name, SEDS.to_safe_identifier(node:get_qualified_name())))
@@ -94,6 +263,9 @@ local function write_c_struct_typedef(output,node)
         end
         if (ref.name and ref.type.max_size and (ref.type.attributes["buffer"] == "subclassUnion")) then
           c_name = c_name .. "_Buffer"
+        end
+        if (ref.name and ref.type.resolved_size and (ref.type.attributes["buffer"] == "packed")) then
+          c_name = c_name .. "_PackedBuffer"
         end
         if (ref.entry) then
           output:add_documentation(ref.entry.attributes.shortdescription, ref.entry.longdescription)
@@ -364,6 +536,9 @@ for ds in SEDS.root:iterate_children(SEDS.basenode_filter) do
              buffNameStem = string.sub(buffNameStem, 1, #buffNameStem - 2)
            end
           output:write(string.format("typedef %-50s %s_PackedBuffer_t[%d];", "uint8_t", buffNameStem, packedsize))
+          if (node.decode_sequence) then
+            write_c_struct_accessors(output, node)
+          end
           output:add_whitespace(1)
         end
       end

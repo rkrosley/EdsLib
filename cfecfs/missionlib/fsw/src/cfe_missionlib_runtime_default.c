@@ -162,20 +162,36 @@ void CFE_SB_Get_PubSub_Parameters(CFE_SB_SoftwareBus_PubSub_Interface_t *Params,
     Params->MsgId = 0;
 
     /* if (Packet->Pri.SecHdrFlags != 0) */
-    if ((Packet->Pri.StreamId[0] & 0x18) != 0)
+    /* if ((Packet->Pri.StreamId[0] & 0x18) != 0) */
+    uint16_t secHdrFlags = 0;
+    CCSDS_PacketType_t pkt = 0;
+    CCSDS_SecHdrFlag_t sec = 0;
+    CCSDS_get_PacketType(&(Packet->Pri), &pkt);
+    CCSDS_get_SecHdrFlag(&(Packet->Pri), &sec);
+    secHdrFlags = (pkt + pkt) + sec;
+    if (secHdrFlags != 0)
     {
         /* CFE_SB_Set_MsgId_InterfaceType(&Params->MsgId, Packet->Pri.SecHdrFlags >> 1); */
-        CFE_SB_Set_MsgId_InterfaceType(&Params->MsgId, (Packet->Pri.StreamId[0] & 0x18) >> 4);
+        /* CFE_SB_Set_MsgId_InterfaceType(&Params->MsgId, (Packet->Pri.StreamId[0] & 0x18) >> 4); */
+        CFE_SB_Set_MsgId_InterfaceType(&Params->MsgId, secHdrFlags);
+        CCSDS_AppId_Atom_t apid = 0;
+        CCSDS_get_AppId(&(Packet->Pri), &apid);
 #if CCSDS_ACTIVE_VERSION == CCSDS_PriHdr_VERSION
         /* CFE_SB_Set_MsgId_Apid(&Params->MsgId, Packet->Pri.AppId & 0x3F); */
-        CFE_SB_Set_MsgId_Apid(&Params->MsgId, Packet->Pri.StreamId[1] & 0x3F);
+        /* CFE_SB_Set_MsgId_Apid(&Params->MsgId, Packet->Pri.StreamId[1] & 0x3F); */
+        CFE_SB_Set_MsgId_Apid(&Params->MsgId, apid & 0x3F);
         /* CFE_SB_Set_MsgId_Subsystem(&Params->MsgId, Packet->Pri.AppId >> 6); */
-        CFE_SB_Set_MsgId_Subsystem(
-            &Params->MsgId, ((Packet->Pri.StreamId[0] << 8) | (Packet->Pri.StreamId[1])) >> 6);
+        /* CFE_SB_Set_MsgId_Subsystem(
+            &Params->MsgId, ((Packet->Pri.StreamId[0] << 8) | (Packet->Pri.StreamId[1])) >> 6); */
+        CFE_SB_Set_MsgId_Subsystem(&Params->MsgId, apid >> 6);
 #elif CCSDS_ACTIVE_VERSION == CCSDS_APIDQHdr_VERSION
         /* CFE_SB_Set_MsgId_Apid(&Params->MsgId, Packet->Pri.AppId); */
-        CFE_SB_Set_MsgId_Apid(&Params->MsgId, Packet->Pri.StreamId[1] & 0x3F);
-        CFE_SB_Set_MsgId_Subsystem(&Params->MsgId, Packet->Ext.SubsystemId);
+        /* CFE_SB_Set_MsgId_Apid(&Params->MsgId, ((Packet->Pri.StreamId[0] << 8) | (Packet->Pri.StreamId[1])) & 0x07FF); */
+        CFE_SB_Set_MsgId_Apid(&Params->MsgId, apid);
+        /* CFE_SB_Set_MsgId_Subsystem(&Params->MsgId, Packet->Ext.SubsystemId); */
+        CCSDS_SubsystemId_Atom_t subsys = 0;
+        CCSDS_get_SubsystemId(&(Packet->Ext), &subsys);
+        CFE_SB_Set_MsgId_Subsystem(&Params->MsgId, subsys);
 #else
 #error "MsgId Mappings not defined for this header style"
 #endif
@@ -186,20 +202,30 @@ void CFE_SB_Set_PubSub_Parameters(CCSDS_SPACEPACKET_QUALIFIED_HEADER_TYPE *     
                                   const CFE_SB_SoftwareBus_PubSub_Interface_t *Params)
 {
     /* Packet->Pri.SecHdrFlags = (CFE_SB_Get_MsgId_InterfaceType(&Params->MsgId) << 1) | 0x01; */
-    Packet->Pri.StreamId[0] = (Packet->Pri.StreamId[0] & 0xE7) | ((CFE_SB_Get_MsgId_InterfaceType(&Params->MsgId) << 4) | 0x80);
+    /* Packet->Pri.StreamId[0] = (Packet->Pri.StreamId[0] & 0xE7) | ((CFE_SB_Get_MsgId_InterfaceType(&Params->MsgId) << 4) | 0x80); */
+    uint16_t secHdrFlags = CFE_SB_Get_MsgId_InterfaceType(&Params->MsgId);
+    CCSDS_PacketType_t pkt = (secHdrFlags >= 2);
+    CCSDS_SecHdrFlag_t sec = (secHdrFlags == 1) || (secHdrFlags == 3);
+    CCSDS_set_PacketType(&(Packet->Pri), pkt);
+    CCSDS_set_SecHdrFlag(&(Packet->Pri), sec);
 #if CCSDS_ACTIVE_VERSION == CCSDS_PriHdr_VERSION
     /* Packet->Pri.AppId =
         (CFE_SB_Get_MsgId_Apid(&Params->MsgId) & 0x3F) | (CFE_SB_Get_MsgId_Subsystem(&Params->MsgId) << 6); */
-    Packet->Pri.StreamId[1] =
+    /* Packet->Pri.StreamId[1] =
         (CFE_SB_Get_MsgId_Apid(&Params->MsgId) & 0x3F) | ((CFE_SB_Get_MsgId_Subsystem(&Params->MsgId) << 6) & 0x0080);
     Packet->Pri.StreamId[0] =
-        (Packet->Pri.StreamId[0] & 0xC0) & ((CFE_SB_Get_MsgId_Subsystem(&Params->MsgId) << 6) & 0xFF00);
+        (Packet->Pri.StreamId[0] & 0xC0) & ((CFE_SB_Get_MsgId_Subsystem(&Params->MsgId) << 6) & 0xFF00); */
+    CCSDS_set_AppId(&(Packet->Pri),
+        (CFE_SB_Get_MsgId_Apid(&Params->MsgId) & 0x3F) | (CFE_SB_Get_MsgId_Subsystem(&Params->MsgId) << 6));
 #elif CCSDS_ACTIVE_VERSION == CCSDS_APIDQHdr_VERSION
     /* Packet->Pri.AppId = CFE_SB_Get_MsgId_Apid(&Params->MsgId); */
-    Packet->Pri.StreamId[0] = (Packet->Pri.StreamId[0] & 0xC0) & (CFE_SB_Get_MsgId_Apid(&Params->MsgId) & 0xFF00 );
-    Packet->Pri.StreamId[1] = CFE_SB_Get_MsgId_Apid(&Params->MsgId) & 0x00FF;
-    Packet->Ext.SubsystemId = CFE_SB_Get_MsgId_Subsystem(&Params->MsgId);
-    Packet->Ext.SystemId = 0x1234; /* not used yet */
+    /* Packet->Pri.StreamId[0] = (Packet->Pri.StreamId[0] & 0xC0) & (CFE_SB_Get_MsgId_Apid(&Params->MsgId) & 0xFF00);
+    Packet->Pri.StreamId[1] = CFE_SB_Get_MsgId_Apid(&Params->MsgId) & 0x00FF; */
+    CCSDS_set_AppId(&(Packet->Pri), CFE_SB_Get_MsgId_Apid(&Params->MsgId));
+    /* Packet->Ext.SubsystemId = CFE_SB_Get_MsgId_Subsystem(&Params->MsgId); */
+    CCSDS_set_SubsystemId(&(Packet->Ext), CFE_SB_Get_MsgId_Subsystem(&Params->MsgId));
+    /* Packet->Ext.SystemId = 0x1234; */ /* not used yet */
+    CCSDS_set_SystemId(&(Packet->Ext), 0x1234); /* not used yet */
 #else
 #error "MsgId Mappings not defined for this header style"
 #endif
