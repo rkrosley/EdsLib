@@ -170,18 +170,17 @@ local function write_c_struct_accessors(output,node)
       output:write("  {")
       output:write("    return 0xc0000001;")
       output:write("  }")
-      output:write(string.format("  %s *buf = (%s *)In;", bufferType, bufferType))
       if (workBits == 8) then
         if (#maskStr == 0) then
-          output:write(string.format("  uint8_t asw = (*buf)[%d];", byteOffset))
+          output:write(string.format("  uint8_t asw = (*In)[%d];", byteOffset))
         else
-          output:write(string.format("  uint8_t asw = (*buf)[%d] & 0x%s;", byteOffset, string.sub(maskStr, 3, 4)))
+          output:write(string.format("  uint8_t asw = (*In)[%d] & 0x%s;", byteOffset, string.sub(maskStr, 3, 4)))
         end
       else
         if (#maskStr == 0) then
-          output:write(string.format("  uint16_t asw = ((*buf)[%d] << 8) | (*buf)[%d];", byteOffset, byteOffset + 1))
+          output:write(string.format("  uint16_t asw = ((*In)[%d] << 8) | (*In)[%d];", byteOffset, byteOffset + 1))
         else
-          output:write(string.format("  uint16_t asw = (((*buf)[%d] << 8) | (*buf)[%d]) & 0x%s;", byteOffset, byteOffset + 1, maskStr))
+          output:write(string.format("  uint16_t asw = (((*In)[%d] << 8) | (*In)[%d]) & 0x%s;", byteOffset, byteOffset + 1, maskStr))
         end
       end
       if (bitsOnRight > 0) then
@@ -197,28 +196,27 @@ local function write_c_struct_accessors(output,node)
       output:write("  {")
       output:write("    return 0xc0000001;")
       output:write("  }")
-      output:write(string.format("  %s *buf = (%s *)Out;", bufferType, bufferType))
       if (workBits == 8) then
         if (#maskStr == 0) then
-          output:write(string.format("  (*buf)[%d] = In;", byteOffset))
+          output:write(string.format("  (*Out)[%d] = In;", byteOffset))
         else
-          output:write(string.format("  (*buf)[%d] = ((*buf)[%d] & ~(0x%s)) | ((In << %d) & 0x%s);",
+          output:write(string.format("  (*Out)[%d] = ((*Out)[%d] & ~(0x%s)) | ((In << %d) & 0x%s);",
             byteOffset, byteOffset, string.sub(maskStr, 3, 4), bitsOnRight, string.sub(maskStr, 3, 4)))
         end
       elseif (bitsOnRight == 0) then
         if (#maskStr == 0) then
-          output:write(string.format("  (*buf)[%d] = (In >> 8);", byteOffset))
-          output:write(string.format("  (*buf)[%d] = (In & 0xFF);", byteOffset + 1))
+          output:write(string.format("  (*Out)[%d] = (In >> 8);", byteOffset))
+          output:write(string.format("  (*Out)[%d] = (In & 0xFF);", byteOffset + 1))
         else
-          output:write(string.format("  (*buf)[%d] = ((*buf)[%d] & ~(0x%s)) | ((In & 0x%s) >> 8);",
+          output:write(string.format("  (*Out)[%d] = ((*Out)[%d] & ~(0x%s)) | ((In & 0x%s) >> 8);",
             byteOffset, byteOffset, string.sub(maskStr, 1, 2), maskStr))
-          output:write(string.format("  (*buf)[%d] = ((*buf)[%d] & ~(0x%s)) | ((In & 0x%s) & 0xFF);",
+          output:write(string.format("  (*Out)[%d] = ((*Out)[%d] & ~(0x%s)) | ((In & 0x%s) & 0xFF);",
             byteOffset + 1, byteOffset + 1, string.sub(maskStr, 3, 4), maskStr))
         end
       else
-        output:write(string.format("  (*buf)[%d] = ((*buf)[%d] & ~(0x%s)) | (((In << %d) & 0x%s) >> 8);",
+        output:write(string.format("  (*Out)[%d] = ((*Out)[%d] & ~(0x%s)) | (((In << %d) & 0x%s) >> 8);",
           byteOffset, byteOffset, string.sub(maskStr, 1, 2), bitsOnRight, maskStr))
-        output:write(string.format("  (*buf)[%d] = ((*buf)[%d] & ~(0x%s)) | (((In << %d) & 0x%s) & 0xFF);",
+        output:write(string.format("  (*Out)[%d] = ((*Out)[%d] & ~(0x%s)) | (((In << %d) & 0x%s) & 0xFF);",
           byteOffset + 1, byteOffset + 1, string.sub(maskStr, 3, 4), bitsOnRight, maskStr))
       end
       output:write("  return 0;")
